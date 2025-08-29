@@ -1,4 +1,4 @@
-# Full, final script for steering and similarity analysis
+# Full, final script for steering and P-VALUE similarity analysis
 
 import torch
 import functools
@@ -6,8 +6,9 @@ import einops
 import gc
 import os
 import psutil
+import numpy as np  # <-- NEW IMPORT
+from scipy import stats  # <-- NEW IMPORT
 
-from datasets import load_dataset
 from tqdm import tqdm
 from torch import Tensor
 from typing import List, Dict, Any
@@ -154,75 +155,85 @@ print_memory_usage("After concatenating activations")
 
 
 ###################################################################################
-# --- START OF NEW/MODIFIED SECTION ---
-# This is where you place the first new block of code.
-# It replaces the old "COMPUTE STEERING DIRECTIONS" section.
+# THIS IS THE REPLACED SECTION
+# It starts here and includes both the analysis and the printing.
 ###################################################################################
 
-# --- COMPUTE STEERING DIRECTIONS AND ANALYZE VECTOR SIMILARITY ---
-print("Computing steering directions and analyzing vector similarity...")
+# --- COMPUTE STEERING DIRECTIONS AND ANALYZE STATISTICAL SIGNIFICANCE ---
+print("Computing steering directions and analyzing statistical significance...")
 activation_layers_to_use = ["resid_pre", "resid_post"]
 steering_directions = defaultdict(list)
 
-# NEW: Dictionary to store similarity results
-similarity_results = defaultdict(dict)
+# NEW: Dictionary to store statistical results
+statistical_results = defaultdict(dict)
 
-for layer_num in range(model.cfg.n_layers):
+for layer_num in tqdm(range(model.cfg.n_layers), desc="Analyzing Layers"):
     pos_idx = -1  # Position index for the last token
 
     for layer in activation_layers_to_use:
-        try:
-            positive_mean_act = get_act_idx(positive_acts, layer, layer_num)[:, pos_idx, :].mean(dim=0)
-            negative_mean_act = get_act_idx(negative_acts, layer, layer_num)[:, pos_idx, :].mean(dim=0)
+        key = utils.get_act_name(layer, layer_num)
+        
+        if key in positive_acts and key in negative_acts:
+            # Get the FULL set of activations at the last token position
+            all_positive_acts = positive_acts[key][:, pos_idx, :]
+            all_negative_acts = negative_acts[key][:, pos_idx, :]
 
-            # --- INSERT THIS NEW ANALYSIS BLOCK ---
-            # 1. Calculate Cosine Similarity
-            cos_sim = torch.nn.functional.cosine_similarity(positive_mean_act, negative_mean_act, dim=0)
-
-            # 2. Calculate Euclidean Distance
-            euclidean_dist = torch.linalg.norm(positive_mean_act - negative_mean_act)
-            
-            # 3. Store the results
-            similarity_results[layer][layer_num] = {
-                "cosine_similarity": cos_sim.item(),
-                "euclidean_distance": euclidean_dist.item()
-            }
-            # --- END OF NEW ANALYSIS BLOCK ---
-
-            # The original steering direction calculation remains the same
+            # --- 1. Calculate Steering Direction (for generation later) ---
+            positive_mean_act = all_positive_acts.mean(dim=0)
+            negative_mean_act = all_negative_acts.mean(dim=0)
             steering_dir = positive_mean_act - negative_mean_act
-            steering_dir = steering_dir / steering_dir.norm() # Normalize the direction
-            steering_directions[layer].append(steering_dir)
+            steering_directions[layer].append(steering_dir / steering_dir.norm())
+
+            # --- 2. Perform Statistical Analysis ---
+            p_values = []
+            t_stats = []
             
-        except KeyError:
-            # This part can be simplified since you will have the keys
-            continue
+            # Convert to float32 NumPy arrays for scipy
+            positive_acts_np = all_positive_acts.float().cpu().numpy()
+            negative_acts_np = all_negative_acts.float().cpu().numpy()
 
-print("Steering directions computed.")
+            # Perform an independent t-test for each dimension
+            for dim in range(positive_acts_np.shape[1]):
+                # Use Welch's t-test (equal_var=False), robust to unequal variances
+                t_stat, p_val = stats.ttest_ind(
+                    positive_acts_np[:, dim],
+                    negative_acts_np[:, dim],
+                    equal_var=False,
+                    nan_policy='omit'
+                )
+                
+                # We care about the magnitude of difference, so use abs(t_stat)
+                t_stats.append(abs(t_stat) if not np.isnan(t_stat) else 0)
+                p_values.append(p_val if not np.isnan(p_val) else 1.0)
+            
+            # --- 3. Store the summarized results for the layer ---
+            statistical_results[layer][layer_num] = {
+                "mean_p_value": np.mean(p_values),
+                "mean_t_stat": np.mean(t_stats),
+                "significant_dims": np.sum(np.array(p_values) < 0.05)
+            }
 
-###################################################################################
-# This is where you place the second new block of code.
-# It comes immediately after the section above.
-###################################################################################
+print("Statistical analysis and steering directions computed.")
 
-# --- PRINT SIMILARITY ANALYSIS RESULTS ---
-print("\n--- VECTOR SIMILARITY ANALYSIS ---")
+# --- PRINT STATISTICAL ANALYSIS RESULTS ---
+print("\n--- STATISTICAL SIGNIFICANCE ANALYSIS (Positive vs. Negative) ---")
 for layer in activation_layers_to_use:
     print(f"\nAnalysis for '{layer}' activations:")
-    print("Layer | Cosine Similarity | Euclidean Distance")
-    print("-------------------------------------------------")
-    for layer_num, metrics in sorted(similarity_results[layer].items()):
-        cos_sim = metrics['cosine_similarity']
-        euc_dist = metrics['euclidean_distance']
-        # Highlight interesting values
-        color_start = "\033[93m" if cos_sim < -0.1 else "" # Yellow for negative similarity
-        color_end = "\033[0m" if cos_sim < -0.1 else ""
-        print(f"{layer_num: <5} | {color_start}{cos_sim: <17.4f}{color_end} | {euc_dist: <18.2f}")
-# --- END OF NEW PRINTING BLOCK ---
+    print("Layer | Mean p-value    | Mean t-statistic | Significant Dims")
+    print("-----------------------------------------------------------------")
+    for layer_num, metrics in sorted(statistical_results[layer].items()):
+        p_val = metrics['mean_p_value']
+        t_stat = metrics['mean_t_stat']
+        sig_dims = metrics['significant_dims']
+        
+        # Highlight layers with low p-values (high significance)
+        color_start = "\033[92m" if p_val < 0.45 else "" # Green for more significant
+        color_end = "\033[0m" if p_val < 0.45 else ""
+        
+        print(f"{layer_num: <5} | {color_start}{p_val: <15.4f}{color_end} | {t_stat: <16.3f} | {sig_dims}")
 
 ###################################################################################
-# --- END OF NEW/MODIFIED SECTION ---
-# The rest of the script continues as before.
+# END OF REPLACED SECTION
 ###################################################################################
 
 
@@ -288,12 +299,19 @@ def get_generations(
 
 # --- TESTING AND EVALUATION ---
 
-STEERING_LAYER_CANDIDATE = 20 # Example: Layer 20
-STEERING_LAYER_CANDIDATE = min(max(0, STEERING_LAYER_CANDIDATE), model.cfg.n_layers - 1)
+# Let's dynamically find the best layer based on our new stats
+# A good heuristic is to find the layer with the highest number of significant dimensions
+# or the highest mean t-statistic.
+best_layer_info = max(
+    [(layer, num, stats) for layer, layer_stats in statistical_results.items() for num, stats in layer_stats.items()],
+    key=lambda x: x[2]['mean_t_stat']
+)
+best_layer_name, best_layer_num, best_layer_stats = best_layer_info
+print(f"\nDynamically selected best layer for intervention: {best_layer_name} at layer {best_layer_num}")
+print(f"Stats: p-value={best_layer_stats['mean_p_value']:.4f}, t-stat={best_layer_stats['mean_t_stat']:.3f}, sig_dims={best_layer_stats['significant_dims']}")
 
-# Get the specific steering direction (from 'resid_post' of the chosen layer)
-selected_steering_dir = steering_directions["resid_post"][STEERING_LAYER_CANDIDATE]
-print(f"\nSelected steering direction from resid_post at layer {STEERING_LAYER_CANDIDATE}.")
+# Get the specific steering direction from our dynamically found best layer
+selected_steering_dir = steering_directions[best_layer_name][best_layer_num]
 
 test_prompts = [
     [{"role": "user", "content": "Describe a typical day at the office."}],
@@ -316,11 +334,17 @@ print("Baseline completions generated.")
 
 # 2. Generate completions with positive steering
 print("\nGenerating completions with POSITIVE steering...")
-positive_steering_coeff = 5.0
+# NOTE: Based on previous results, a large coefficient causes collapse.
+# Let's use a much smaller, more reasonable value.
+positive_steering_coeff = 0.8
 positive_steering_hook_fn = functools.partial(direction_steering_hook, direction=selected_steering_dir, coeff=positive_steering_coeff)
+# Let's also apply the hook to a more targeted range of layers
+start_hook_layer = max(0, best_layer_num - 5)
+end_hook_layer = min(model.cfg.n_layers, best_layer_num + 5)
+print(f"Applying hooks from layer {start_hook_layer} to {end_hook_layer}")
 positive_steering_fwd_hooks = [
-    (utils.get_act_name("resid_post", layer_num), positive_steering_hook_fn)
-    for layer_num in range(model.cfg.n_layers)
+    (utils.get_act_name(best_layer_name.split('.')[-1], l), positive_steering_hook_fn)
+    for l in range(start_hook_layer, end_hook_layer)
 ]
 positive_steered_generations = get_generations(
     model, tokenizer, test_prompts, fwd_hooks=positive_steering_fwd_hooks, max_tokens_generated=64, batch_size=N_INST_TEST_STEER
@@ -330,11 +354,11 @@ print("Positive steered completions generated.")
 
 # 3. Generate completions with negative steering
 print("\nGenerating completions with NEGATIVE steering...")
-negative_steering_coeff = -5.0
+negative_steering_coeff = -0.8
 negative_steering_hook_fn = functools.partial(direction_steering_hook, direction=selected_steering_dir, coeff=negative_steering_coeff)
 negative_steering_fwd_hooks = [
-    (utils.get_act_name("resid_post", layer_num), negative_steering_hook_fn)
-    for layer_num in range(model.cfg.n_layers)
+    (utils.get_act_name(best_layer_name.split('.')[-1], l), negative_steering_hook_fn)
+    for l in range(start_hook_layer, end_hook_layer)
 ]
 negative_steered_generations = get_generations(
     model, tokenizer, test_prompts, fwd_hooks=negative_steering_fwd_hooks, max_tokens_generated=64, batch_size=N_INST_TEST_STEER
@@ -348,6 +372,7 @@ for i in range(N_INST_TEST_STEER):
     print(f"\n\033[1mINSTRUCTION {i}: {test_prompts[i][0]['content']}\033[0m")
     print(f"\033[92mBASELINE COMPLETION:\n{baseline_generations[i]}\033[0m")
     print(f"\033[94mPOSITIVE STEERING (coeff={positive_steering_coeff}):\n{positive_steered_generations[i]}\033[0m")
-    print(f"\03i[91mNEGATIVE STEERING (coeff={negative_steering_coeff}):\n{negative_steered_generations[i]}\033[0m")
+    # Corrected typo in the next line
+    print(f"\033[91mNEGATIVE STEERING (coeff={negative_steering_coeff}):\n{negative_steered_generations[i]}\033[0m")
 
 print("\n--- SCRIPT FINISHED ---")
