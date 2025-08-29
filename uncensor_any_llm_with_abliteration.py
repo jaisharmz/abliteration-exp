@@ -19,6 +19,8 @@ import torch
 import functools
 import einops
 import gc
+import os       # DEBUG
+import psutil   # DEBUG
 
 from datasets import load_dataset
 from tqdm import tqdm
@@ -30,6 +32,17 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from jaxtyping import Float, Int
 from collections import defaultdict
 
+# DEBUG: Function to print memory usage
+def print_memory_usage(stage=""):
+    process = psutil.Process(os.getpid())
+    ram_gb = process.memory_info().rss / (1024 ** 3)
+    print(f"--- MEMORY CHECK ({stage}) ---")
+    print(f"Current RAM usage: {ram_gb:.2f} GB")
+    print("--------------------------\n")
+
+print("--- SCRIPT START ---")
+print_memory_usage("Initial state")
+
 # Turn automatic differentiation off to save GPU memory (credit: Undi95)
 torch.set_grad_enabled(False)
 
@@ -38,15 +51,20 @@ def reformat_texts(texts):
 
 # Get harmful and harmless datasets
 def get_harmful_instructions():
+    print("Loading harmful behaviors dataset...")
     dataset = load_dataset('mlabonne/harmful_behaviors')
+    print("Harmful behaviors dataset loaded.")
     return reformat_texts(dataset['train']['text']), reformat_texts(dataset['test']['text'])
 
 def get_harmless_instructions():
+    print("Loading harmless alpaca dataset...")
     dataset = load_dataset('mlabonne/harmless_alpaca')
+    print("Harmless alpaca dataset loaded.")
     return reformat_texts(dataset['train']['text']), reformat_texts(dataset['test']['text'])
 
 harmful_inst_train, harmful_inst_test = get_harmful_instructions()
 harmless_inst_train, harmless_inst_test = get_harmless_instructions()
+print_memory_usage("After loading datasets")
 
 MODEL_ID = "mlabonne/Daredevil-8B"
 NEW_MODEL_ID = "mlabonne/Daredevil-8B-abliterated"
@@ -57,15 +75,21 @@ MODEL_TYPE = "meta-llama/Meta-Llama-3-8B-Instruct"
 # git clone https://huggingface.co/mlabonne/Daredevil-8B meta-llama/Meta-Llama-3-8B-Instruct
 
 # Load model and tokenizer
+print(f"Attempting to load model: {MODEL_TYPE}")
 model = HookedTransformer.from_pretrained_no_processing(
     MODEL_TYPE,
     local_files_only=True,
     dtype=torch.bfloat16,
     default_padding_side='left'
 )
+print("Model loaded successfully.")
+print_memory_usage("After loading model")
+
+print("Loading tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_TYPE)
 tokenizer.padding_side = 'left'
 tokenizer.pad_token = tokenizer.eos_token
+print("Tokenizer loaded.")
 
 def tokenize_instructions(tokenizer, instructions):
     return tokenizer.apply_chat_template(
@@ -77,9 +101,12 @@ def tokenize_instructions(tokenizer, instructions):
         add_generation_prompt=True,
     ).input_ids
 
-n_inst_train = min(256, len(harmful_inst_train), len(harmless_inst_train))
+# NOTE: I reduced n_inst_train to 128 from 256 to save memory, as discussed.
+n_inst_train = min(128, len(harmful_inst_train), len(harmless_inst_train))
+print(f"\nUsing {n_inst_train} training examples.")
 
 # Tokenize datasets
+print("Tokenizing datasets...")
 harmful_tokens = tokenize_instructions(
     tokenizer,
     instructions=harmful_inst_train[:n_inst_train],
@@ -88,9 +115,14 @@ harmless_tokens = tokenize_instructions(
     tokenizer,
     instructions=harmless_inst_train[:n_inst_train],
 )
+print("Tokenization complete.")
+print(f"Shape of harmful tokens: {harmful_tokens.shape}")
+print(f"Shape of harmless tokens: {harmless_tokens.shape}")
+print_memory_usage("After tokenization")
 
 # Define batch size based on available VRAM
 batch_size = 32
+print(f"Using batch size: {batch_size}")
 
 # Initialize defaultdicts to store activations
 harmful = defaultdict(list)
@@ -98,18 +130,21 @@ harmless = defaultdict(list)
 
 # Process the training data in batches
 num_batches = (n_inst_train + batch_size - 1) // batch_size
+print(f"Starting activation caching loop for {num_batches} batches...")
 for i in tqdm(range(num_batches)):
-    print(i)
+    print(f"\nProcessing batch {i+1}/{num_batches}...")
     start_idx = i * batch_size
     end_idx = min(n_inst_train, start_idx + batch_size)
 
     # Run models on harmful and harmless prompts, cache activations
+    print(f"Running model on harmful prompts for batch {i+1}...")
     harmful_logits, harmful_cache = model.run_with_cache(
         harmful_tokens[start_idx:end_idx],
         names_filter=lambda hook_name: 'resid' in hook_name,
         device='cpu',
         reset_hooks_end=True
     )
+    print(f"Running model on harmless prompts for batch {i+1}...")
     harmless_logits, harmless_cache = model.run_with_cache(
         harmless_tokens[start_idx:end_idx],
         names_filter=lambda hook_name: 'resid' in hook_name,
@@ -118,18 +153,28 @@ for i in tqdm(range(num_batches)):
     )
 
     # Collect and store the activations
+    print(f"Storing activations for batch {i+1}...")
     for key in harmful_cache:
         harmful[key].append(harmful_cache[key])
         harmless[key].append(harmless_cache[key])
 
+    print_memory_usage(f"End of batch {i+1}")
+
     # Flush RAM and VRAM
+    print(f"Cleaning up memory for batch {i+1}...")
     del harmful_logits, harmless_logits, harmful_cache, harmless_cache
     gc.collect()
     torch.cuda.empty_cache()
 
+print("\nActivation caching loop finished.")
+print_memory_usage("After caching loop")
+
 # Concatenate the cached activations
+print("Attempting to concatenate activations...")
 harmful = {k: torch.cat(v) for k, v in harmful.items()}
 harmless = {k: torch.cat(v) for k, v in harmless.items()}
+print("Activations concatenated successfully.")
+print_memory_usage("After concatenating activations")
 
 # Helper function to get activation index
 def get_act_idx(cache_dict, act_name, layer):
@@ -137,6 +182,7 @@ def get_act_idx(cache_dict, act_name, layer):
     return cache_dict[utils.get_act_name(*key)]
 
 # Compute difference of means between harmful and harmless activations at intermediate layers
+print("Computing refusal directions...")
 activation_layers = ["resid_pre", "resid_mid", "resid_post"]
 activation_refusals = defaultdict(list)
 
@@ -144,14 +190,26 @@ for layer_num in range(1, model.cfg.n_layers):
     pos = -1  # Position index
 
     for layer in activation_layers:
-        harmful_mean_act = get_act_idx(harmful, layer, layer_num)[:, pos, :].mean(dim=0)
-        harmless_mean_act = get_act_idx(harmless, layer, layer_num)[:, pos, :].mean(
-            dim=0
-        )
+        try:
+            harmful_mean_act = get_act_idx(harmful, layer, layer_num)[:, pos, :].mean(dim=0)
+            harmless_mean_act = get_act_idx(harmless, layer, layer_num)[:, pos, :].mean(
+                dim=0
+            )
 
-        refusal_dir = harmful_mean_act - harmless_mean_act
-        refusal_dir = refusal_dir / refusal_dir.norm()
-        activation_refusals[layer].append(refusal_dir)
+            refusal_dir = harmful_mean_act - harmless_mean_act
+            refusal_dir = refusal_dir / refusal_dir.norm()
+            activation_refusals[layer].append(refusal_dir)
+        except KeyError:
+            # Llama3 doesn't have resid_mid, so we skip it to avoid crashing
+            if layer == "resid_mid":
+                continue
+            else:
+                raise
+
+print("Refusal directions computed.")
+print_memory_usage("After computing refusal directions")
+
+# ... (The rest of the script remains the same) ...
 
 # Get all calculated potential refusal directions, sort them in descending order based on their mean
 # Use a subset of layers if certain activations are not promising
@@ -231,12 +289,15 @@ def direction_ablation_hook(
     return activation - proj
 
 # Testing baseline
+print("\nGenerating baseline completions...")
 N_INST_TEST = 4
 baseline_generations = get_generations(
     model, tokenizer, harmful_inst_test[:N_INST_TEST], fwd_hooks=[]
 )
+print("Baseline completions generated.")
 
 # Evaluating layers defined earlier (needs human evaluation to determine best layer for refusal inhibition)
+print("Evaluating intervention candidates...")
 EVAL_N = 20  # Evaluate how many of the top N potential directions
 evals = []
 for refusal_dir in tqdm(activation_scored[:EVAL_N]):
@@ -244,12 +305,13 @@ for refusal_dir in tqdm(activation_scored[:EVAL_N]):
     fwd_hooks = [
         (utils.get_act_name(act_name, layer), hook_fn)
         for layer in list(range(model.cfg.n_layers))
-        for act_name in activation_layers
+        for act_name in activation_layers if act_name != "resid_mid" # Exclude resid_mid
     ]
     intervention_generations = get_generations(
         model, tokenizer, harmful_inst_test[:N_INST_TEST], fwd_hooks=fwd_hooks
     )
     evals.append(intervention_generations)
+print("Intervention candidates evaluated.")
 
 # Print generations for human evaluation
 blacklist = ["I cannot", "I can't"]
@@ -277,6 +339,7 @@ LAYER_CANDIDATE = 9
 refusal_dir = activation_scored[LAYER_CANDIDATE]
 
 # Orthogonalize the model's weights
+print("\nOrthogonalizing model weights...")
 if refusal_dir.device != model.W_E.device:
     refusal_dir = refusal_dir.to(model.W_E.device)
 model.W_E.data = get_orthogonalized_matrix(model.W_E, refusal_dir)
@@ -286,11 +349,15 @@ for block in tqdm(model.blocks):
         refusal_dir = refusal_dir.to(block.attn.W_O.device)
     block.attn.W_O.data = get_orthogonalized_matrix(block.attn.W_O, refusal_dir)
     block.mlp.W_out.data = get_orthogonalized_matrix(block.mlp.W_out, refusal_dir)
+print("Model weights orthogonalized.")
+print_memory_usage("After orthogonalizing weights")
 
 # Generate text with abliterated model
+print("Generating completions with orthogonalized model...")
 orthogonalized_generations = get_generations(
     model, tokenizer, harmful_inst_test[:N_INST_TEST], fwd_hooks=[]
 )
+print("Orthogonalized completions generated.")
 
 # Print generations
 for i in range(N_INST_TEST):
@@ -300,7 +367,12 @@ for i in range(N_INST_TEST):
     print(f"\033[91mINTERVENTION COMPLETION:\n{evals[LAYER_CANDIDATE][i]}")
     print(f"\033[95mORTHOGONALIZED COMPLETION:\n{orthogonalized_generations[i]}\n")
 
+
+# I am commenting out the final conversion and push steps to simplify debugging
+# You can uncomment them once the script runs without being killed.
+"""
 # Convert model back to HF safetensors
+print("\nConverting model back to HuggingFace format...")
 hf_model = AutoModelForCausalLM.from_pretrained(MODEL_TYPE, torch_dtype=torch.bfloat16)
 lm_model = hf_model.model
 
@@ -316,6 +388,12 @@ for l in range(model.cfg.n_layers):
     lm_model.layers[l].mlp.down_proj.weight = torch.nn.Parameter(
         torch.transpose(state_dict[f"blocks.{l}.mlp.W_out"], 0, 1).contiguous()
     )
+print("Model converted.")
+print_memory_usage("After HF conversion")
 
 # # Push it to the Hugging Face Hub
+# print("Pushing model to Hub...")
 # hf_model.push_to_hub(NEW_MODEL_ID)
+# print("Model pushed to Hub.")
+"""
+print("\n--- SCRIPT FINISHED ---")
