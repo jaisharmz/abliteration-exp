@@ -103,11 +103,11 @@ print("Tokenizing positive and negative datasets...")
 positive_tokens = tokenize_instructions(
     tokenizer,
     instructions=positive_inst_train[:n_inst_steer],
-).to(model.device)
+).to("cuda")
 negative_tokens = tokenize_instructions(
     tokenizer,
     instructions=negative_inst_train[:n_inst_steer],
-).to(model.device)
+).to("cuda")
 print("Tokenization complete.")
 print_memory_usage("After tokenization of steering datasets")
 
@@ -274,7 +274,7 @@ def get_generations(
     for i in tqdm(range(0, len(instructions), gen_batch_size)):
         tokens = tokenize_instructions(
             tokenizer, instructions=instructions[i : i + gen_batch_size]
-        ).to(model.device)
+        ).to("cuda")
         generation = _generate_with_hooks(
             model,
             tokenizer,
