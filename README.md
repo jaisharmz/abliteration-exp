@@ -1,0 +1,2 @@
+```pip install "huggingface_hub[cli]" transformers transformers_stream_generator tiktoken transformer_lens einops jaxtyping
+git clone https://huggingface.co/mlabonne/Daredevil-8B meta-llama/Meta-Llama-3-8B-Instruct```
