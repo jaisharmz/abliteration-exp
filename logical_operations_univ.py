@@ -168,43 +168,107 @@ def get_act_idx(cache_dict, act_name, layer):
 # Compute difference of means between harmful and harmless activations at intermediate layers
 activation_layers = ["resid_pre", "resid_mid", "resid_post"]
 activation_refusals = defaultdict(list)
-pvalues = {}
+pvalues = defaultdict(dict)
 
-for layer_num in range(1, model.cfg.n_layers):
+for layer_num in tqdm(range(model.cfg.n_layers), desc="Calculating p-values"):
     pos = -1  # Position index
 
-    for layer in activation_layers:
+    for layer_type in activation_layers:
         try:
-            harmful_mean_act = get_act_idx(harmful, layer, layer_num)[:, pos, :].mean(dim=0)
-            harmless_mean_act = get_act_idx(harmless, layer, layer_num)[:, pos, :].mean(dim=0)
+            harmful_acts = get_act_idx(harmful, layer_type, layer_num)[:, pos, :].detach().cpu().to(torch.float32).numpy()
+            harmless_acts = get_act_idx(harmless, layer_type, layer_num)[:, pos, :].detach().cpu().to(torch.float32).numpy()
 
-            harmful_acts = get_act_idx(harmful, layer, layer_num)[:, pos, :].detach().cpu().to(torch.float32).numpy()
-            harmless_acts = get_act_idx(harmless, layer, layer_num)[:, pos, :].detach().cpu().to(torch.float32).numpy()
-            
-            # This try-except block handles potential errors with the MMD test on some layers/data
             try:
                 stat, pvalue = mmd_test.test(harmful_acts, harmless_acts)
             except Exception:
-                pvalue = 1.0 # Assign a non-significant p-value if test fails
-            
-            if layer not in pvalues:
-                pvalues[layer] = [pvalue, 1]
-            else:
-                pvalues[layer][0] += pvalue
-                pvalues[layer][1] += 1
+                pvalue = 1.0
 
+            pvalues[layer_type][layer_num] = pvalue
+
+            harmful_mean_act = get_act_idx(harmful, layer_type, layer_num)[:, pos, :].mean(dim=0)
+            harmless_mean_act = get_act_idx(harmless, layer_type, layer_num)[:, pos, :].mean(dim=0)
             refusal_dir = harmful_mean_act - harmless_mean_act
             refusal_dir = refusal_dir / refusal_dir.norm()
-            activation_refusals[layer].append(refusal_dir)
+            activation_refusals[layer_type].append(refusal_dir)
+
         except KeyError:
-            # Llama3 doesn't have resid_mid
-            if layer == 'resid_mid': continue
+            if layer_type == 'resid_mid': continue
             else: raise
 
-print("Average p-values per layer type:")
-for key in pvalues:
-    pvalues[key] = pvalues[key][0] / pvalues[key][1]
-    print(f"{key}: {pvalues[key]}")
+
+pvalues_by_layer_num = defaultdict(list)
+for layer_type, layer_data in pvalues.items():
+    for layer_num, pvalue in layer_data.items():
+        pvalues_by_layer_num[layer_num].append(pvalue)
+
+averaged_pvalues = {}
+for layer_num, p_list in pvalues_by_layer_num.items():
+    if p_list:
+        averaged_pvalues[layer_num] = sum(p_list) / len(p_list)
+
+print("\nAverage p-value per layer:")
+sorted_layers = sorted(averaged_pvalues.items())
+for layer_num, avg_pvalue in sorted_layers:
+    print(f"Layer {layer_num:2d}: {avg_pvalue:.5f}")
+    
+# activation_layers = ["resid_pre", "resid_mid", "resid_post"]
+# activation_refusals = defaultdict(list)
+# pvalues = {}
+
+# for layer_num in tqdm(range(model.cfg.n_layers), desc="Calculating p-values"):
+#     pos = -1  # Position index
+
+#     for layer_type in activation_layers:
+#         try:
+#             # Get activations for MMD test
+#             harmful_acts = get_act_idx(harmful, layer_type, layer_num)[:, pos, :].detach().cpu().to(torch.float32).numpy()
+#             harmless_acts = get_act_idx(harmless, layer_type, layer_num)[:, pos, :].detach().cpu().to(torch.float32).numpy()
+
+#             # This try-except block handles potential errors with the MMD test
+#             try:
+#                 stat, pvalue = mmd_test.test(harmful_acts, harmless_acts)
+#             except Exception:
+#                 pvalue = 1.0 # Assign a non-significant p-value if test fails
+
+#             # Store the p-value for the specific layer type and layer number
+#             pvalues[layer_type][layer_num] = pvalue
+
+#             # Calculate and store the refusal direction (this part is unchanged)
+#             harmful_mean_act = get_act_idx(harmful, layer_type, layer_num)[:, pos, :].mean(dim=0)
+#             harmless_mean_act = get_act_idx(harmless, layer_type, layer_num)[:, pos, :].mean(dim=0)
+#             refusal_dir = harmful_mean_act - harmless_mean_act
+#             refusal_dir = refusal_dir / refusal_dir.norm()
+#             activation_refusals[layer_type].append(refusal_dir)
+
+#         except KeyError:
+#             # Llama3 doesn't have resid_mid, so we skip it
+#             if layer_type == 'resid_mid': continue
+#             else: raise
+
+# # print("Average p-values per layer type:")
+# # for key in pvalues:
+# #     pvalues[key] = pvalues[key][0] / pvalues[key][1]
+# #     print(f"{key}: {pvalues[key]}")
+
+# print("\n--- P-values per Layer ---")
+# # A standard significance level
+# alpha = 0.05
+
+# for layer_type, layer_data in pvalues.items():
+#     print(f"\n--- Layer Type: {layer_type} ---")
+#     # Sort the layers by number for a clean, ordered output
+#     sorted_layers = sorted(layer_data.items())
+    
+#     # Find the layer with the minimum p-value for this type
+#     min_p_layer, min_p_value = min(sorted_layers, key=lambda item: item[1])
+    
+#     for layer_num, pvalue in sorted_layers:
+#         significance_marker = " (significant)" if pvalue < alpha else ""
+#         highlight = "\033[1m" if layer_num == min_p_layer else ""
+#         reset_highlight = "\033[0m" if layer_num == min_p_layer else ""
+#         print(f"{highlight}  Layer {layer_num:2d}: p-value = {pvalue:.5f}{significance_marker}{reset_highlight}")
+    
+#     print(f"  -> Most significant for '{layer_type}' is Layer {min_p_layer} with p={min_p_value:.5f}")
 
 
 # Get all calculated potential refusal directions, sort them in descending order based on their mean
@@ -229,7 +293,7 @@ def _generate_with_hooks(
     fwd_hooks=[],
 ) -> List[str]:
     # Ensure tokens are on the correct device
-    tokens = tokens.to(model.device)
+    tokens = tokens.to('cuda')
     all_tokens = torch.zeros(
         (tokens.shape[0], tokens.shape[1] + max_tokens_generated),
         dtype=torch.long,
@@ -355,7 +419,7 @@ if len(activation_scored) > LAYER_CANDIDATE_FOR_FULL_ABLITERATION:
     model_full_abliteration = HookedTransformer.from_pretrained_no_processing(
         MODEL_TYPE, local_files_only=True, dtype=torch.bfloat16, default_padding_side='left'
     )
-    model_full_abliteration.to(model.device)
+    model_full_abliteration.to('cuda')
 
     # Orthogonalize the weights of the new model instance
     print("\nPerforming full, permanent abliteration for comparison...")
