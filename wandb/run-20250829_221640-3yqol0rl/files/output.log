@@ -1,0 +1,20 @@
+Using EarlyStoppingCallback without load_best_model_at_end=True. Once training is finished, the best model will not be loaded automatically.
+Traceback (most recent call last):
+  File "/mnt/c/Users/jais/Documents/abliteration-exp/finetune_model_code_generation.py", line 106, in <module>
+    trainer.train()
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/transformers/trainer.py", line 2328, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/transformers/trainer.py", line 2578, in _inner_training_loop
+    self.control = self.callback_handler.on_train_begin(args, self.state, self.control)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/transformers/trainer_callback.py", line 506, in on_train_begin
+    return self.call_event("on_train_begin", args, state, control)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/transformers/trainer_callback.py", line 556, in call_event
+    result = getattr(callback, event)(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/transformers/trainer_callback.py", line 752, in on_train_begin
+    assert args.metric_for_best_model is not None, (
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: EarlyStoppingCallback requires metric_for_best_model to be defined

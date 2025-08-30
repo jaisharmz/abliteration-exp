@@ -1,0 +1,7 @@
+100%|██████████████████████████████████████████████████████████████████████████████████████████| 33/33 [00:30<00:00,  1.08it/s]
+{'loss': 1.6373, 'grad_norm': 1.6049864292144775, 'learning_rate': 0.00014545454545454546, 'entropy': 1.3707271754741668, 'num_tokens': 35240.0, 'mean_token_accuracy': 0.6779567718505859, 'epoch': 0.98}
+{'loss': 1.1993, 'grad_norm': 0.4436585605144501, 'learning_rate': 8.484848484848486e-05, 'entropy': 1.225785577619398, 'num_tokens': 68755.0, 'mean_token_accuracy': 0.7387819902316944, 'epoch': 1.88}
+{'loss': 1.061, 'grad_norm': 0.5044999718666077, 'learning_rate': 2.4242424242424244e-05, 'entropy': 1.0542637528599919, 'num_tokens': 100488.0, 'mean_token_accuracy': 0.7573376459044379, 'epoch': 2.78}
+{'train_runtime': 31.33, 'train_samples_per_second': 15.704, 'train_steps_per_second': 1.053, 'train_loss': 1.289463404453162, 'entropy': 1.1095260447925992, 'num_tokens': 108126.0, 'mean_token_accuracy': 0.7376724481582642, 'epoch': 3.0}
+Training complete. Saving model and tokenizer to ./results-llama-3.2-1b...
+Finetuning script finished. The model is available in the local directory.

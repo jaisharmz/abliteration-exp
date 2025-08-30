@@ -1,0 +1,6 @@
+  0%|                                                                                                   | 0/11 [00:00<?, ?it/s]`loss_type=None` was set in the config but it is unrecognised.Using the default loss: `ForCausalLMLoss`.
+100%|██████████████████████████████████████████████████████████████████████████████████████████| 11/11 [00:04<00:00,  2.25it/s]
+{'loss': 2.593, 'grad_norm': 0.5772011876106262, 'learning_rate': 3.6363636363636364e-05, 'entropy': 2.5436404943466187, 'num_tokens': 42971.0, 'mean_token_accuracy': 0.5192326821386815, 'epoch': 0.98}
+{'train_runtime': 669.1929, 'train_samples_per_second': 0.245, 'train_steps_per_second': 0.016, 'train_loss': 2.6372287273406982, 'entropy': 2.8226375579833984, 'num_tokens': 43919.0, 'mean_token_accuracy': 0.4713982939720154, 'epoch': 1.0}
+Training complete. Saving model and tokenizer to ./results...
+Finetuning script finished. The model is available in the local directory.

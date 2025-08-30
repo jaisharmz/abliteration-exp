@@ -1,0 +1,15 @@
+100%|████████████████████████████████████████████████████████████████████████████████████████| 110/110 [01:38<00:00,  1.12it/s]
+{'loss': 1.6342, 'grad_norm': 0.6278097629547119, 'learning_rate': 0.00018363636363636366, 'entropy': 1.363081407546997, 'num_tokens': 35240.0, 'mean_token_accuracy': 0.6783173069357872, 'epoch': 0.98}
+{'loss': 1.1797, 'grad_norm': 0.43084651231765747, 'learning_rate': 0.00016545454545454545, 'entropy': 1.1800457996291083, 'num_tokens': 68755.0, 'mean_token_accuracy': 0.7416360201062383, 'epoch': 1.88}
+{'loss': 1.0249, 'grad_norm': 0.5335500836372375, 'learning_rate': 0.00014727272727272728, 'entropy': 1.0073780159692507, 'num_tokens': 100488.0, 'mean_token_accuracy': 0.7628179273089847, 'epoch': 2.78}
+{'loss': 1.0434, 'grad_norm': 0.475820392370224, 'learning_rate': 0.0001290909090909091, 'entropy': 1.0413910214965407, 'num_tokens': 132989.0, 'mean_token_accuracy': 0.7623289372469928, 'epoch': 3.68}
+{'loss': 0.9404, 'grad_norm': 0.5680537223815918, 'learning_rate': 0.00011090909090909092, 'entropy': 0.9714276661743989, 'num_tokens': 164585.0, 'mean_token_accuracy': 0.7812954783439636, 'epoch': 4.59}
+{'loss': 0.8832, 'grad_norm': 0.6948459148406982, 'learning_rate': 9.272727272727273e-05, 'entropy': 0.9023693332800994, 'num_tokens': 198947.0, 'mean_token_accuracy': 0.7882859545785028, 'epoch': 5.49}
+{'loss': 0.8541, 'grad_norm': 0.9004914164543152, 'learning_rate': 7.454545454545455e-05, 'entropy': 0.891362190246582, 'num_tokens': 230918.0, 'mean_token_accuracy': 0.7965404165757669, 'epoch': 6.39}
+{'loss': 0.7795, 'grad_norm': 1.104455590248108, 'learning_rate': 5.636363636363636e-05, 'entropy': 0.8232890013101939, 'num_tokens': 262714.0, 'mean_token_accuracy': 0.8135616118843491, 'epoch': 7.29}
+{'loss': 0.7141, 'grad_norm': 1.7235028743743896, 'learning_rate': 3.818181818181819e-05, 'entropy': 0.778045789615528, 'num_tokens': 295047.0, 'mean_token_accuracy': 0.8295296398369042, 'epoch': 8.2}
+{'loss': 0.681, 'grad_norm': 1.8720616102218628, 'learning_rate': 2e-05, 'entropy': 0.763809448963887, 'num_tokens': 328449.0, 'mean_token_accuracy': 0.8332213533891214, 'epoch': 9.1}
+{'loss': 0.6235, 'grad_norm': 3.6457037925720215, 'learning_rate': 1.818181818181818e-06, 'entropy': 0.7304770769299688, 'num_tokens': 360420.0, 'mean_token_accuracy': 0.848200569281707, 'epoch': 10.0}
+{'train_runtime': 99.3442, 'train_samples_per_second': 16.508, 'train_steps_per_second': 1.107, 'train_loss': 0.941624268618497, 'epoch': 10.0}
+Training complete. Saving model and tokenizer to ./results-llama-3.2-1b...
+Finetuning script finished. The model is available in the local directory.

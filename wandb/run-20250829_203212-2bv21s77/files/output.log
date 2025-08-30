@@ -1,0 +1,5 @@
+100%|██████████████████████████████████████████████████████████████████████████████████████████| 11/11 [00:10<00:00,  1.09it/s]
+{'loss': 1.6885, 'grad_norm': 0.6864086985588074, 'learning_rate': 3.6363636363636364e-05, 'entropy': 1.38909832239151, 'num_tokens': 35240.0, 'mean_token_accuracy': 0.6723613098263741, 'epoch': 0.98}
+{'train_runtime': 10.9631, 'train_samples_per_second': 14.959, 'train_steps_per_second': 1.003, 'train_loss': 1.675019708546725, 'entropy': 1.5701488256454468, 'num_tokens': 36042.0, 'mean_token_accuracy': 0.6817042827606201, 'epoch': 1.0}
+Training complete. Saving model and tokenizer to ./results-llama-3.2-1b...
+Finetuning script finished. The model is available in the local directory.

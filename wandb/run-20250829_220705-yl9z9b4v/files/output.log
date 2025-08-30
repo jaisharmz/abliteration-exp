@@ -1,0 +1,27 @@
+ 34%|█████████████████████████████▉                                                           | 37/110 [02:52<05:10,  4.25s/it]Traceback (most recent call last):
+{'loss': 1.6336, 'grad_norm': 2.057711601257324, 'learning_rate': 0.00018363636363636366, 'entropy': 1.3665071725845337, 'num_tokens': 35240.0, 'mean_token_accuracy': 0.6791181519627572, 'epoch': 0.98}
+{'loss': 1.1824, 'grad_norm': 0.4464571177959442, 'learning_rate': 0.00016545454545454545, 'entropy': 1.1783098336812612, 'num_tokens': 68755.0, 'mean_token_accuracy': 0.7412627242706917, 'epoch': 1.88}
+{'loss': 1.0268, 'grad_norm': 0.5845163464546204, 'learning_rate': 0.00014727272727272728, 'entropy': 1.0108364288871352, 'num_tokens': 100488.0, 'mean_token_accuracy': 0.7624283916241413, 'epoch': 2.78}
+  File "/mnt/c/Users/jais/Documents/abliteration-exp/finetune_model_code_generation.py", line 99, in <module>
+    model=model,
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/transformers/trainer.py", line 2328, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/transformers/trainer.py", line 2672, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/trl/trainer/sft_trainer.py", line 1112, in training_step
+    return super().training_step(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/transformers/trainer.py", line 4060, in training_step
+    self.accelerator.backward(loss, **kwargs)
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/accelerate/accelerator.py", line 2734, in backward
+    loss.backward(**kwargs)
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/torch/_tensor.py", line 647, in backward
+    torch.autograd.backward(
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/torch/autograd/__init__.py", line 354, in backward
+    _engine_run_backward(
+  File "/home/jais/miniconda3/envs/abliteration/lib/python3.11/site-packages/torch/autograd/graph.py", line 829, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

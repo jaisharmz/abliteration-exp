@@ -1,0 +1,24 @@
+100%|████████████████████████████████████████████████████████████████████████████████████████| 200/200 [05:52<00:00,  1.76s/it]
+{'loss': 1.6015, 'grad_norm': 1.3901424407958984, 'learning_rate': 0.000191, 'entropy': 1.3743938723125972, 'num_tokens': 32463.0, 'mean_token_accuracy': 0.67934466374887, 'epoch': 1.0}
+{'loss': 1.1712, 'grad_norm': 1.121069073677063, 'learning_rate': 0.000181, 'entropy': 1.15418924028809, 'num_tokens': 64926.0, 'mean_token_accuracy': 0.7441981708681261, 'epoch': 2.0}
+{'loss': 1.0582, 'grad_norm': 1.238083839416504, 'learning_rate': 0.000171, 'entropy': 1.048615552283622, 'num_tokens': 97389.0, 'mean_token_accuracy': 0.7587137641133489, 'epoch': 3.0}
+{'loss': 0.977, 'grad_norm': 1.1257615089416504, 'learning_rate': 0.000161, 'entropy': 0.9814074055568592, 'num_tokens': 129852.0, 'mean_token_accuracy': 0.7716752693459794, 'epoch': 4.0}
+{'loss': 0.9387, 'grad_norm': 1.3566935062408447, 'learning_rate': 0.000151, 'entropy': 0.9395222921629209, 'num_tokens': 162315.0, 'mean_token_accuracy': 0.7866259507230811, 'epoch': 5.0}
+{'loss': 0.8486, 'grad_norm': 1.744120717048645, 'learning_rate': 0.000141, 'entropy': 0.8765686073818723, 'num_tokens': 194778.0, 'mean_token_accuracy': 0.8000708431810946, 'epoch': 6.0}
+{'loss': 0.737, 'grad_norm': 2.6420154571533203, 'learning_rate': 0.000131, 'entropy': 0.791348164146011, 'num_tokens': 227241.0, 'mean_token_accuracy': 0.820345588632532, 'epoch': 7.0}
+{'loss': 0.6, 'grad_norm': 2.59718918800354, 'learning_rate': 0.000121, 'entropy': 0.6702717615140451, 'num_tokens': 259704.0, 'mean_token_accuracy': 0.8510832915434966, 'epoch': 8.0}
+{'loss': 0.4846, 'grad_norm': 2.668519973754883, 'learning_rate': 0.00011100000000000001, 'entropy': 0.5599953161703574, 'num_tokens': 292167.0, 'mean_token_accuracy': 0.8714030562220393, 'epoch': 9.0}
+{'loss': 0.3671, 'grad_norm': 2.4945380687713623, 'learning_rate': 0.000101, 'entropy': 0.4985428943827346, 'num_tokens': 324630.0, 'mean_token_accuracy': 0.899804142681328, 'epoch': 10.0}
+{'loss': 0.2998, 'grad_norm': 2.587449789047241, 'learning_rate': 9.1e-05, 'entropy': 0.40893623555028763, 'num_tokens': 357093.0, 'mean_token_accuracy': 0.9170329780191988, 'epoch': 11.0}
+{'loss': 0.2574, 'grad_norm': 3.2608065605163574, 'learning_rate': 8.1e-05, 'entropy': 0.35573546064866557, 'num_tokens': 389556.0, 'mean_token_accuracy': 0.9383855784261549, 'epoch': 12.0}
+{'loss': 0.1803, 'grad_norm': 2.931746244430542, 'learning_rate': 7.1e-05, 'entropy': 0.3064346885358965, 'num_tokens': 422019.0, 'mean_token_accuracy': 0.9551769784978918, 'epoch': 13.0}
+{'loss': 0.1314, 'grad_norm': 2.560396194458008, 'learning_rate': 6.1e-05, 'entropy': 0.2471834888329377, 'num_tokens': 454482.0, 'mean_token_accuracy': 0.9653869464590743, 'epoch': 14.0}
+{'loss': 0.1081, 'grad_norm': 2.5524022579193115, 'learning_rate': 5.1000000000000006e-05, 'entropy': 0.20922443753964193, 'num_tokens': 486945.0, 'mean_token_accuracy': 0.9747994091059711, 'epoch': 15.0}
+{'loss': 0.0881, 'grad_norm': 1.455429196357727, 'learning_rate': 4.1e-05, 'entropy': 0.17905440543954437, 'num_tokens': 519408.0, 'mean_token_accuracy': 0.9798639158944826, 'epoch': 16.0}
+{'loss': 0.079, 'grad_norm': 2.0708212852478027, 'learning_rate': 3.1e-05, 'entropy': 0.1584708487262597, 'num_tokens': 551871.0, 'mean_token_accuracy': 0.9831560173550168, 'epoch': 17.0}
+{'loss': 0.0684, 'grad_norm': 1.3101977109909058, 'learning_rate': 2.1e-05, 'entropy': 0.1437578102624094, 'num_tokens': 584334.0, 'mean_token_accuracy': 0.984629880737614, 'epoch': 18.0}
+{'loss': 0.0625, 'grad_norm': 1.388020396232605, 'learning_rate': 1.1000000000000001e-05, 'entropy': 0.13334290461765752, 'num_tokens': 616797.0, 'mean_token_accuracy': 0.9861774122392809, 'epoch': 19.0}
+{'loss': 0.059, 'grad_norm': 1.6415364742279053, 'learning_rate': 1.0000000000000002e-06, 'entropy': 0.12756842797672427, 'num_tokens': 649260.0, 'mean_token_accuracy': 0.9869757697388932, 'epoch': 20.0}
+{'train_runtime': 353.5583, 'train_samples_per_second': 8.315, 'train_steps_per_second': 0.566, 'train_loss': 0.5059070000052452, 'epoch': 20.0}
+Training complete. Saving model and tokenizer to ./results-llama-3.2-1b...
+Finetuning script finished. The model is available in the local directory.
